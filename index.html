@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>F9_SENSI - OFICIAL</title>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --primary: #ff0000;
+            --bg: #000000;
+            --card-bg: #0a0a0a;
+            --text: #ffffff;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        /* Marca d'água */
+        .watermark {
+            position: fixed;
+            top: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary);
+            text-shadow: 0 0 10px var(--primary);
+            letter-spacing: 3px;
+            z-index: 100;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 380px;
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 15px;
+            border: 1px solid #1a1a1a;
+            text-align: center;
+        }
+
+        /* Botões de Seleção */
+        .row { display: flex; gap: 10px; margin-bottom: 20px; }
+        .btn-opt {
+            flex: 1; padding: 12px; border: none; border-radius: 5px;
+            background: #1a1a1a; color: #fff; cursor: pointer; font-weight: bold;
+            transition: 0.3s;
+        }
+        .btn-opt.active { background: var(--primary); box-shadow: 0 0 15px var(--primary); }
+
+        /* Inputs */
+        input {
+            width: 100%; padding: 15px; background: #000; border: 1px solid #333;
+            color: #fff; border-radius: 8px; margin-bottom: 20px; box-sizing: border-box;
+        }
+
+        .label-red { color: var(--primary); font-size: 12px; font-weight: bold; margin-bottom: 10px; display: block; text-align: left; text-transform: uppercase; }
+
+        /* Botões de Gerar */
+        .btn-generate {
+            width: 100%; padding: 15px; margin-bottom: 10px; border: none; border-radius: 8px;
+            background: linear-gradient(90deg, #800000, #ff0000); color: white;
+            font-weight: bold; cursor: pointer; text-transform: uppercase;
+        }
+
+        /* Tela de Loading */
+        #loading-screen { display: none; }
+        .circle-container {
+            width: 150px; height: 150px; border: 2px solid var(--primary);
+            border-radius: 50%; margin: 30px auto; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; box-shadow: 0 0 20px var(--primary);
+        }
+
+        /* Tela de Resultados */
+        #result-screen { display: none; text-align: left; }
+        .sensi-item { margin-bottom: 15px; }
+        .sensi-header { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 5px; }
+        .bar-bg { height: 8px; background: #222; border-radius: 4px; overflow: hidden; }
+        .bar-fill { height: 100%; background: linear-gradient(90deg, #ff0000 0%, #ffffff 100%); transition: width 1.5s ease-in-out; }
+
+        .btn-tiro-box {
+            background: #111; border: 1px solid #333; border-radius: 10px;
+            padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="watermark">F9_SENSI</div>
+
+    <div class="container">
+        <div id="config-ui">
+            <div class="row">
+                <button class="btn-opt active" onclick="setOS('android', this)">ANDROID</button>
+                <button class="btn-opt" onclick="setOS('ios', this)">IOS</button>
+            </div>
+
+            <label class="label-red">2. Modelo do Dispositivo</label>
+            <input type="text" id="device-model" placeholder="Ex: Moto G 60">
+
+            <label class="label-red">3. Opção de DPI</label>
+            <div class="row">
+                <button class="btn-opt active" id="dpi-sim" onclick="setDPI(true)">COM DPI</button>
+                <button class="btn-opt" id="dpi-nao" onclick="setDPI(false)">SEM DPI</button>
+            </div>
+
+            <label class="label-red">4. Gerar Configuração</label>
+            <button class="btn-generate" onclick="startLoading('BAIXA')">SENSI BAIXA (CONTROLE)</button>
+            <button class="btn-generate" onclick="startLoading('MÉDIA')">SENSI MÉDIA (HÍBRIDA)</button>
+            <button class="btn-generate" onclick="startLoading('ALTA')">SENSI ALTA (VELOCIDADE)</button>
+        </div>
+
+        <div id="loading-screen">
+            <div class="circle-container">
+                <span style="font-size: 30px;">🔫</span>
+                <h2 id="percent-text" style="margin: 5px 0;">0%</h2>
+            </div>
+            <p class="label-red" style="text-align: center;">Escaneando Geometria...</p>
+            <p id="target-device" style="font-size: 11px; opacity: 0.5;"></p>
+        </div>
+
+        <div id="result-screen">
+            <h3 style="text-align: center; letter-spacing: 1px; color: var(--primary);">SENSIBILIDADE DO JOGO</h3>
+            <div id="results-container"></div>
+            
+            <div class="btn-tiro-box">
+                <div>
+                    <span style="color:var(--primary); font-size:10px; display:block">BOTÃO DE TIRO</span>
+                    <span style="font-size:11px; color:#666">Ajuste recomendado</span>
+                </div>
+                <div id="fire-val" style="font-size: 22px; font-weight: bold;">--</div>
+            </div>
+
+            <button class="btn-generate" style="margin-top:20px" onclick="location.reload()">NOVA CONFIGURAÇÃO</button>
+        </div>
+    </div>
+
+    <script>
+        let selectedOS = 'android';
+        let useDPI = true;
+
+        function setOS(val, btn) {
+            selectedOS = val;
+            document.querySelectorAll('.row:first-child .btn-opt').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        }
+
+        function setDPI(val) {
+            useDPI = val;
+            document.getElementById('dpi-sim').classList.toggle('active', val);
+            document.getElementById('dpi-nao').classList.toggle('active', !val);
+        }
+
+        function startLoading(tipo) {
+            const model = document.getElementById('device-model').value;
+            if(!model) return alert("Digite o modelo do celular!");
+
+            document.getElementById('config-ui').style.display = 'none';
+            document.getElementById('loading-screen').style.display = 'block';
+            document.getElementById('target-device').innerText = "TARGET: " + model;
+
+            let progress = 0;
+            let timer = setInterval(() => {
+                progress++;
+                document.getElementById('percent-text').innerText = progress + "%";
+                
+                if(progress >= 100) {
+                    clearInterval(timer);
+                    // Ativa os fogos de artifício
+                    confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#ff0000', '#ffffff'] });
+                    showFinalSensi(tipo);
+                }
+            }, 40);
+        }
+
+        function showFinalSensi(tipo) {
+            document.getElementById('loading-screen').style.display = 'none';
+            document.getElementById('result-screen').style.display = 'block';
+
+            // Define base de valores baseado no botão clicado (Baixa, Média, Alta)
+            let base = tipo === 'ALTA' ? 180 : (tipo === 'MÉDIA' ? 140 : 100);
+
+            const sensiData = [
+                { name: "GERAL", val: Math.min(200, base + rand(20)) },
+                { name: "PONTO VERMELHO", val: Math.min(200, base - 20 + rand(30)) },
+                { name: "MIRA 2X", val: Math.min(200, base - 10 + rand(40)) },
+                { name: "MIRA 4X", val: Math.min(200, base + 15 + rand(5)) },
+                { name: "MIRA AWM", val: 30 + rand(40) },
+                { name: "OLHADINHA", val: 80 + rand(20) }
+            ];
+
+            let html = '';
+            sensiData.forEach(item => {
+                html += `
+                    <div class="sensi-item">
+                        <div class="sensi-header"><span>${item.name}</span><span>${item.val}</span></div>
+                        <div class="bar-bg">
+                            <div class="bar-fill" style="width: ${(item.val / 200) * 100}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            document.getElementById('results-container').innerHTML = html;
+            document.getElementById('fire-val').innerText = (45 + rand(20)) + "%";
+        }
+
+        function rand(max) { return Math.floor(Math.random() * max); }
+    </script>
+</body>
+</html>
